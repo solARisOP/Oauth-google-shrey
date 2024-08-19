@@ -1,48 +1,48 @@
-import {  useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import useLogout from "../../hooks/useLogout";
- import { useAuthContext } from "../../context/AuthContext";
-import { Navigate } from "react-router-dom";
-// import useGoogle from "../../hooks/useGoogle";
+import { useAuthContext } from "../../context/AuthContext";
+import useGoogle from "../../hooks/useGoogle";
 
 const Home = () => {
-  const [count, setCount] = useState(0)
-  const { logout, loading } = useLogout()
-   const {authUser} = useAuthContext()
-  // const {google} = useGoogle()
+	const [count, setCount] = useState(0)
+	const { logout, loading } = useLogout()
 
-  useEffect(() => {
-    console.log('here we are')
-    if(!authUser){
-     < Navigate to = '/login'/>
-    }
-    }, [authUser]);
+	const handleCount = async () => {
+		setCount(count + 1)
+		const res = await fetch(`/api/counter`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ count })
+		})
+		console.log(res)
+	}
 
-      // ignore this
-  const handleCount = async () => {
-    setCount(count + 1)
-    const res = await fetch(`/api/counter`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ count })
-    })
-    console.log(res)
-  }
-  return (
-    <div className="w-3/5 flex sm:h-[450px] md:h-[700px] rounded-md bg-clip-padding backdrop-filter 
+	const {authUser} = useAuthContext()
+	const {google} = useGoogle()
+	useEffect(() => {
+		google()
+		.then(()=>{
+		  console.log(authUser);
+		  if(!authUser) {
+			  <Navigate to='/login' replace={true}/>
+		  }
+		})
+	  }, [])
+	return (
+		<div className="w-3/5 flex sm:h-[450px] md:h-[700px] rounded-md bg-clip-padding backdrop-filter 
       backdrop-blur-sm bg-opacity-10 border border-blue-300">
-      <h1>{count}</h1>
+			<h1>{count}</h1>
 
-      <button onClick={handleCount}>Click me</button>
+			<button onClick={handleCount}>Click me</button>
 
-      <div className="mt-auto">
-        {!loading ? <button className="w-6 h-6 text-gray-500 cursor-pointer" onClick={logout} /> : <span className="loading loading-spinner"></span>}
-      </div>
+			<div className="mt-auto">
+				{!loading ? <button className="w-6 h-6 text-gray-500 cursor-pointer" onClick={logout} /> : <span className="loading loading-spinner"></span>}
+			</div>
 
-    </div>
-  )
+		</div>
+	)
 }
-// 2/4 w
 
 export default Home

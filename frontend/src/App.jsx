@@ -1,4 +1,3 @@
-
 import { Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
 import './index.css'
@@ -17,9 +16,9 @@ function App() {
     <div className='p-4 flex justify-center items-center h-screen'>
         
      <Routes>
-     <Route path='/signup' element={authUser ? <Navigate to='/'/> : <SignUp/>}/>
-     <Route path='/login' element={authUser ? <Navigate to ='/'/> : <Login/>}/>
-     <Route path='/' loader = {google} element={ <Home/> }/>
+     <Route path='/signup' element={authUser ? <Navigate to={'/'} replace={true} /> : <SignUp/>}/>
+     <Route path='/login' element={authUser ? <Navigate to ={'/'} replace={true} /> : <Login/>}/>
+     <Route path='/' element={authUser ? <Home /> : <Navigate to ='/login' replace={true} />}/>
      </Routes>
       <Toaster/>
     </div>

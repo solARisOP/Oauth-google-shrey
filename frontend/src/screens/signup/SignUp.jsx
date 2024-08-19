@@ -1,12 +1,23 @@
-import { Link } from "react-router-dom"
+import { Link, Navigate } from "react-router-dom"
 import GenderCheckbox from "./GenderCheckbox"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import useSignUp from "../../hooks/useSignUp.js"
 import getGoogleOauthURL from "../../hooks/getGoogleUrl.js"
-
-
+import { useAuthContext } from "../../context/AuthContext.jsx"
+import useGoogle from "../../hooks/useGoogle.js"
 
 const SignUp = () => {
+  const {google} = useGoogle()
+  const {authUser} = useAuthContext()
+  useEffect(() => {
+	  google()
+	  .then(()=>{
+		if(authUser) {
+			<Navigate to='/' replace={true}/>
+		}
+	  })
+	}, [])
+
   const [inputs, setInputs] = useState({
     fullName: '',
     username: '',

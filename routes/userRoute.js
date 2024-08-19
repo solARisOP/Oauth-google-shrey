@@ -4,11 +4,8 @@ import authRoute from './authRoute.js'
 
 const router = express.Router()
 
-
-router.use('/api/auth', authRoute )
-router.get('/api/sessions/oauth/google', googleOauthHandler)
-router.get('/api/auth/data', getUserData)
-
-
+router.get('/auth/data', getUserData)
+router.use('/auth', authRoute )
+router.get('/sessions/oauth/google', googleOauthHandler)
 
 export default router;

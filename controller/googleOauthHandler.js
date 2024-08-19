@@ -1,169 +1,167 @@
 import axios from "axios";
 import qs from "qs";
-
 import jwt from "jsonwebtoken";
 import User from "../model/userSchema.js";
 import { config } from "dotenv";
 config();
 
 export const googleOauthHandler = async (req, res) => {
-  try {
-    const code = req.query.code;
+	try {
 
-    // if (!code) {
-    //   return res.status(400).json({ error: "Authorization code is required" });
-    // }
+		const origin = req.get('Origin'); // Gets the 'Origin' header
+		const referer = req.get('Referer');
 
-    const { id_token, access_token } = await getGoogleOauthTokens(code);
+		console.log('Origin:', origin);
+		console.log('Referer:', referer);
 
-    // const googleUser = jwt.decode(id_token)
+		const code = req.query.code;
 
-    // or make a network request to get google user
+		const { id_token, access_token } = await getGoogleOauthTokens(code);
 
-    const googleUser = await getGoogleUser(id_token, access_token);
+		const googleUser = await getGoogleUser(id_token, access_token);
 
-    console.log(googleUser.data.email);
+		console.log(googleUser.data.email);
 
-    // // NOW UPSERT THE USER INTO THE DATABASE
+		const user = await User.findOne({ email: googleUser.data.email });
 
-    const user = await User.findOne({ email: googleUser.data.email });
+		if (user) {
+			const accessToken = jwt.sign({ id: user._id }, "jwtsecretfkfkkdddfkfkf", {
+				expiresIn: "1d",
+			});
+			const refreshToken = jwt.sign(
+				{ id: user._id },
+				"jwtsecretfkfkkdddfkfkf",
+				{ expiresIn: "10d" }
+			);
 
-    if (user) {
-      const accessToken = jwt.sign({ id: user._id }, "jwtsecretfkfkkdddfkfkf", {
-        expiresIn: "1d",
-      });
-      const refreshToken = jwt.sign(
-        { id: user._id },
-        "jwtsecretfkfkkdddfkfkf",
-        { expiresIn: "10d" }
-      );
+			// set cookies
+			const options = {
+				httpOnly: true,
+				secure: true,
+				sameSite: "none",
+			};
 
-      // set cookies
-      const options = {
-        httpOnly: true,
-        secure: true,
-        sameSite: "lax",
-      };
+			res
+				.cookie("accessToken", accessToken, options)
+				.cookie("refreshToken", refreshToken, options)
 
-      return res
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
-        .redirect("http://localhost:3000/")
-        
-    }
+			return res
+				.redirect("http://localhost:3000/")
 
-    const newuser = new User({
-      email: googleUser.data.email,
-      name: googleUser.data.name,
-      picture: googleUser.data.picture,
-    });
-    await newuser.save();
+		}
 
-    // const user = await findAndUpdateUser({email : googleUser.data.email},
-    //   {
-    //   email : googleUser.data.email,
-    //   name : googleUser.data.name,
-    //   picture : googleUser.data.picture
-    // },{
-    //   upsert : true,
-    //   new : true,
-    // })
+		const newuser = new User({
+			email: googleUser.data.email,
+			name: googleUser.data.name,
+			picture: googleUser.data.picture,
+		});
+		await newuser.save();
 
-    const accessToken = jwt.sign(
-      { id: newuser._id },
-      "jwtsecretfkfkkdddfkfkf",
-      { expiresIn: "1d" }
-    );
-    const refreshToken = jwt.sign(
-      { id: newuser._id },
-      "jwtsecretfkfkkdddfkfkf",
-      { expiresIn: "10d" }
-    );
+		const accessToken = jwt.sign(
+			{ id: newuser._id },
+			"jwtsecretfkfkkdddfkfkf",
+			{ expiresIn: "1d" }
+		);
+		const refreshToken = jwt.sign(
+			{ id: newuser._id },
+			"jwtsecretfkfkkdddfkfkf",
+			{ expiresIn: "10d" }
+		);
 
-    // set cookies
-    const options = {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-    };
+		// set cookies
+		const options = {
+			httpOnly: true,
+			secure: true,
+			sameSite: "none",
+		};
 
-      return res
-      .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", refreshToken, options)
-     
-      .redirect("http://localhost:3000/")
-      
-  } catch (error) {
-    console.error("Error in googleOauthHandler:", error.message);
+		res
+			.cookie("accessToken", accessToken, options)
+			.cookie("refreshToken", refreshToken, options)
 
-    // If the error comes from the OAuth token request, log it for debugging
-    if (error.response) {
-      console.error("Error response data:", error.response.data);
-    }
+		return res
+			.redirect("http://localhost:3000/")
 
-    return res.status(500).json({ error: "Internal Server Error" });
-  }
+	} catch (error) {
+		console.error("Error in googleOauthHandler:", error.message);
+
+		// If the error comes from the OAuth token request, log it for debugging
+		if (error.response) {
+			console.error("Error response data:", error.response.data);
+		}
+
+		return res.status(500).json({ error: "Internal Server Error" });
+	}
 };
 
 export const getGoogleOauthTokens = async (code) => {
-  const url = "https://oauth2.googleapis.com/token";
+	const url = "https://oauth2.googleapis.com/token";
 
-  const values = {
-    code,
-    client_id: process.env.GOOGLE_CLIENT_ID,
-    client_secret: process.env.GOOGLE_CLIENT_SECRET,
-    redirect_uri: process.env.GOOGLE_REDIRECT_URL,
-    grant_type: "authorization_code",
-  };
+	const values = {
+		code,
+		client_id: process.env.GOOGLE_CLIENT_ID,
+		client_secret: process.env.GOOGLE_CLIENT_SECRET,
+		redirect_uri: process.env.GOOGLE_REDIRECT_URL,
+		grant_type: "authorization_code",
+	};
 
-  // console.log(values);
+	// console.log(values);
 
-  try {
-    const res = await axios.post(url, qs.stringify(values), {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    });
-    return res.data;
-  } catch (error) {
-    // Log more detailed error response
-    if (error.response) {
-      console.log("Error response data:", error.response.data);
-    } else {
-      console.log("Error message:", error.message);
-    }
-  }
+	try {
+		const res = await axios.post(url, qs.stringify(values), {
+			headers: {
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+		});
+		return res.data;
+	} catch (error) {
+		// Log more detailed error response
+		if (error.response) {
+			console.log("Error response data:", error.response.data);
+		} else {
+			console.log("Error message:", error.message);
+		}
+	}
 };
 
 export const getGoogleUser = async (id_token, access_token) => {
-  try {
-    const res = await axios.get(
-      `https://www.googleapis.com/oauth2/v3/userinfo?alt=json&access_token=${access_token}`,
-      {
-        headers: {
-          Authorization: `Bearer ${id_token}`,
-        },
-      }
-    );
+	try {
+		const res = await axios.get(
+			`https://www.googleapis.com/oauth2/v3/userinfo?alt=json&access_token=${access_token}`,
+			{
+				headers: {
+					Authorization: `Bearer ${id_token}`,
+				},
+			}
+		);
 
-    return res;
-  } catch (error) {
-    console.error(error);
-  }
+		return res;
+	} catch (error) {
+		console.error(error);
+	}
 };
 
-export const getUserData = async (req,res) =>{
+export const getUserData = async (req, res) => {
 
-  const accessToken = req.cookies.accessToken
+	const accessToken = req.cookies.accessToken
 
-  const decoded = jwt.verify(accessToken, 'jwtsecretfkfkkdddfkfkf' )
-  console.log('helloo apiii')
-  const user = await User.findById(decoded.id)
+	if(!accessToken) {
+		return res
+		.json(null)
+	}
 
-  res.json({email : user.email,
-    name : user.name,
-    picture : user.picture
-  })
-    
+	const decoded = jwt.verify(accessToken, 'jwtsecretfkfkkdddfkfkf')
+
+	const user = await User.findById(decoded.id)
+
+	console.log("here and there")
+	return res
+		.status(200)
+		.json({
+			email: user.email,
+			name: user.name,
+			picture: user.picture
+		})
+
 }
 
