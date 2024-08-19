@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body{
+    background: url('/planet.jpg');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+background: url("img_tree.gif") no-repeat fixed center;
+
+::-webkit-scrollbar-track{
+    background:#555;
+ }
+
+::-webkit-scrollbar{
+    width: 8px;
+}
+
+
+::-webkit-scrollbar-thumb{
+    background:rgb(35, 20, 63);
+    border-radius: 5px;
+ }
+ ::-webkit-scrollbar-thumb:hover{
+    background:#195340;
+    border-radius: 5px;
+ }
